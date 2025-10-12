@@ -9,7 +9,7 @@
                 width: 60px;
                 border: solid 2px;
             }
-            .Cell[empty="false"] {
+            .Cell[tower="Basic"] {
                 background-color: blue;
             }
             .Cell:hover {
@@ -17,82 +17,105 @@
             }
         </style>    
         <script>
-            class Field { //
+            class GameManager {
                 cellSize = 60;
                 cells = [];
                 enemies = [];
-                constructor (length, width) {
-                    for(let i = 0; i < width; i++) {
+                waves = 0;
+
+                constructor (cells, lanes) {
+                    for(let i = 0; i < lanes; i++) {
                         this.cells.push([]);
                     }
-                    this.cells.forEach(element => {element.length = length});
+                    this.cells.forEach((lane) => {lane.length = cells});
                 }
-                draw() {
-                    for(let i = 0; i < this.cells.length; i++) {
+
+                start() {
+                    this.createField();
+                    this.spawnEnemies(2);
+                    this.spawnEnemies(1);
+                }
+
+                update(fps) {
+                    this.enemies.forEach((enemy) => {enemy.move(fps)});
+                    setTimeout(this.update.bind(this), 1000/fps, fps);
+                }
+
+                createField() {
+                    for(let lane = 0; lane < this.cells.length; lane++) {
                         document.write("<div style='display: flex;'>");
-                        for(let j = 0; j < this.cells[i].length; j++) {
-                            document.write(`<div id="${i}${j}" class="Cell" empty="true"></div>`);
-                            document.getElementById(i.toString() + j.toString()).addEventListener("click", (event) => this.createTower(event.target.id));
+                        for(let cell = 0; cell < this.cells[lane].length; cell++) {
+                            let id = `c_${lane}_${cell}`;
+                            document.write(`<div id="${id}" class="Cell" tower="Empty"></div>`);
+                            document.getElementById(id).addEventListener("click", (event) => this.createTower(event.target.id));
                         }
                         document.write("</div>");
                     }
                 }
+
                 createTower(cell) {
-                    this.cells[cell[0]][cell[1]] = 2;
-                    console.log(this.cells);
-                    document.getElementById(cell).setAttribute("empty", false);
+                    let idParts = cell.split("_");
+                    this.cells[idParts[1]][idParts[2]] = new Tower;
+                    document.getElementById(cell).setAttribute("tower", "Basic");
                 }
-                createEnemies(Enemies) {
-                    for(let i = 0; i < Enemies.length; i++) {
-                    this.enemies.push(Enemies[i]);
-                    this.enemies[this.enemies.length-1].id = `e${i}`;
-                    this.enemies[this.enemies.length-1].draw();
+
+                spawnEnemies(amount) {
+                    let speed = 60;
+                    let x = 64 * this.cells[0].length + 8;
+
+                    for(let i = 0; i < amount; i++) {
+                        let lane = Math.floor(Math.random() * this.cells.length);
+                        let y = 64 * lane + 8 + 10;
+
+                        this.enemies.push(new Enemy(speed, lane, x, y, `e_${this.waves}_${i}`));
+                        this.enemies[this.enemies.length-1].createSprite();
                     }
+                    this.waves++;
                 }
             }
+
             class Enemy {
-                speed = 60;
-                disabled = false;
+                speed;
+                x;
+                y;
+                lane;
                 id;
-                constructor (lane, cells) {
+                disabled = false;
+
+                constructor(speed, lane, x, y, id) {
+                    this.speed = speed;
                     this.lane = lane;
-                    this.x = cells * 64 + 8;
-                    this.y = this.lane*64+18;
+                    this.x = x;
+                    this.y = y;
+                    this.id =  id;
                 }
-                draw() {
+
+                createSprite() {
                    document.write(`<div id="${this.id}" style='position: absolute; width: 40px; height: 40px; background-color: yellow; left: ${this.x}px; top: ${this.y}px;'></div>`);
                 }
-                move(frameTime) {
+
+                move(fps) {
                     if(!this.disabled) {
                         let sprite = document.getElementById(this.id.toString());
-                        let posX = Number(sprite.style.left.replace("px", "")) - this.speed * frameTime / 1000;
-                        sprite.style.left = posX.toString() + "px";
-                        if(posX <= 0) {
+                        this.x = Number(sprite.style.left.replace("px", "")) - this.speed / fps;
+                        sprite.style.left = this.x.toString() + "px";
+                        if(this.x <= 0) {
                             this.disabled = true;
                             sprite.hidden = true;
                         }
                     }
                 }
             }
-            class Tower {
 
+            class Tower {
             }
         </script>
     </head>
     <body>
         <script>
-            var frameTime = 100;
-            lane = new Field(5, 5);
-            lane.draw()
-            let enemies = [new Enemy(0, 5), new Enemy(3, 5), new Enemy(4, 5)]
-            lane.createEnemies(enemies);
-            render(10000);
-
-            function render() {
-                lane.enemies.forEach((enemy) => {enemy.move(frameTime)});
-
-                setTimeout(render, frameTime);
-            }
+            let game = new GameManager(7, 5);
+            game.start();
+            game.update(60);
         </script>
     </body>
 </html>

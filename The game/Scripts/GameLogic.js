@@ -5,7 +5,8 @@ class LevelManager {
     }; //info about level
     waveInfo = {
         waves: undefined, //array of waves
-        currentWave: 0
+        currentWave: 0,
+        randomDelay: 0
     }; //info about waves
     entities = {
         towers: [],
@@ -31,7 +32,7 @@ class LevelManager {
         this.initEntitiesArrays();
         this.createButtons();
         this.createCells();
-        this.killEnemyDebug();
+        this.enemyDebug();
         this.update();
     }
 
@@ -39,6 +40,7 @@ class LevelManager {
         console.log(`Status: ${this.status}`);
 
         if (this.status == "running") {
+            this.entitiesHpManager();
             this.waveManager();
             this.entities.enemies.forEach(lane => lane.forEach(enemy => enemy.move()));
 
@@ -110,50 +112,103 @@ class LevelManager {
         document.getElementById("gameScreen").innerHTML += enemy.createSprite();
     }
 
-    spawnWave() {//spawns enemies of the current wave
+    spawnWaveEnemy() {//spawn random enemy of the current wave
         let waveNumber = this.waveInfo.currentWave;
         let wave = this.waveInfo.waves[waveNumber];
-        while (wave > 0) {
-            let type, idLeft;
-            let randomLane = Math.floor(Math.random() * this.levelInfo.lanes);
-            if (wave > 99) {
-                type = "Fast";
-                idLeft = Math.floor(wave / 100);
-                wave -= 100;
-            } else if (wave > 9) {
-                type = "Tough";
-                idLeft = Math.floor(wave / 10);
-                wave -= 10;
-            } else {
+        let enemyNumber = Math.floor(Math.random() * wave.toString().length);
+        if(enemyNumber == 0 && (wave % 10) == 0) {
+            enemyNumber++;
+        }
+        if(enemyNumber == 1 && (wave % 100) < 10) {
+            enemyNumber++;
+        }
+        let type, idLeft;
+        let randomLane = Math.floor(Math.random() * this.levelInfo.lanes);
+        switch (enemyNumber) {
+            case 0:
                 type = "Basic";
                 idLeft = wave;
-                wave--;
-            }
-            this.spawnEnemy(`${type}_${waveNumber}_${idLeft}`, randomLane, type);
+                this.waveInfo.waves[waveNumber]--;
+                break;
+            case 1:
+                type = "Tough";
+                idLeft = Math.floor(wave / 10);
+                this.waveInfo.waves[waveNumber] -= 10;
+                break;
+            case 2:
+                type = "Fast";
+                idLeft = Math.floor(wave / 100);
+                this.waveInfo.waves[waveNumber] -= 100;
+                break;
         }
+        this.spawnEnemy(`${type}_${waveNumber}_${idLeft}`, randomLane, type);
     }
 
     waveManager() {//spawns and progresses waves and checks lose and win conditions
-        if (!this.entities.enemies.some(lane => lane.length > 0)) {
-            if (this.waveInfo.currentWave < this.waveInfo.waves.length) {
-                this.spawnWave();
-                this.waveInfo.currentWave++;
+        if (this.waveInfo.currentWave < this.waveInfo.waves.length) {
+            let wave = this.waveInfo.waves[this.waveInfo.currentWave];
+            if(wave > 0 && this.waveInfo.randomDelay == 0) {
+                this.spawnWaveEnemy();
+                this.waveInfo.randomDelay = Math.floor((Math.random() * 2 + 1) * tps);
+            } else if(wave == 0) {
+                if(this.entities.enemies.every(lane => lane.length == 0)) {
+                    this.waveInfo.currentWave++;
+                }
             } else {
-                this.status = "win";
+                this.waveInfo.randomDelay--;
             }
-        } else if (this.entities.enemies.some(lane => lane.some(enemy => enemy.position.x < (this.firstCell.x - cellSize.x / 2)))) {
-            this.status = "lose";
+            if(this.entities.enemies.some(lane => lane.some(enemy => enemy.position.x <= this.firstCell.x - cellSize.x / 2))) {
+                this.status = "lose";
+            }
+        } else {
+            this.status = "win";
         }
     }
 
-    killEnemyDebug() { //temporary function to kill enemies with a press of the key "S"
-        window.addEventListener("keydown", (event) => {
+    entitiesHpManager() {//removes entities with no hp
+        let enemies = this.entities.enemies;
+        let noHp = entity => entity.hp <= 0;
+        while (enemies.some(lane => lane.some(noHp))) {
+            let laneIndex = enemies.findIndex(lane => lane.some(noHp));
+            let enemyIndex = enemies[laneIndex].findIndex(noHp);
+            let enemy = this.entities.enemies[laneIndex].splice(enemyIndex, 1)[0];
+            document.getElementById(enemy.id).remove();
+        }
+        let basicSprite = "Assets/Enemies/basic_enemy.png";
+        let basicHp = enemy => (enemy.type == "Tough" && enemy.hp <= 50 && document.getElementById(enemy.id).src.includes("tough"));
+        while (enemies.some(lane => lane.some(basicHp))) {
+            let laneIndex = enemies.findIndex(lane => lane.some(basicHp));
+            let enemyIndex = enemies[laneIndex].findIndex(basicHp);
+            let sprite = document.getElementById(enemies[laneIndex][enemyIndex].id);
+            sprite.src = basicSprite;
+            this.entities.enemies[laneIndex][enemyIndex].position.x += this.spriteOffset.toughEnemy.x - this.spriteOffset.basicEnemy.x;
+            this.entities.enemies[laneIndex][enemyIndex].position.y += this.spriteOffset.toughEnemy.y - this.spriteOffset.basicEnemy.y;
+            sprite.style.left = this.entities.enemies[laneIndex][enemyIndex].position.x.toString() + "px";
+            sprite.style.top = this.entities.enemies[laneIndex][enemyIndex].position.y.toString() + "px";
+        }
+    }
+
+    enemyDebug() { //temporary function to debug enemies
+        window.addEventListener("keydown", (event) => { // kill enemies with a press of the key "S"
             if (event.code == "KeyS") {
                 let enemies = this.entities.enemies;
                 for (let i = 0; i < enemies.length; i++) {
                     if (enemies[i].length > 0) {
                         let enemy = this.entities.enemies[i].pop();
                         document.getElementById(enemy.id).remove();
+                        break;
+                    }
+                }
+            }
+        }, { signal: this.buttonControl.signal });
+
+
+        window.addEventListener("keydown", (event) => { //damage enemies with a press of the key "D"
+            if (event.code == "KeyD") {
+                let enemies = this.entities.enemies;
+                for (let i = 0; i < enemies.length; i++) {
+                    if (enemies[i].length > 0) {
+                        this.entities.enemies[i][0].hp -= 10;
                         break;
                     }
                 }
@@ -220,6 +275,13 @@ class Enemy {
         let sprite = document.getElementById(this.id);
         this.position.x -= this.speed * cellSize.x / tps;
         sprite.style.left = this.position.x.toString() + "px";
+        if (!sprite.src.includes("tough")) {
+            let deg = Number(sprite.style.rotate.replace("deg", "")) - 212 * this.speed / tps;
+            sprite.style.rotate = deg.toString() + "deg";
+        }
+        if (this.type == "Fast") {
+            this.speed = 1.2 - (this.hp - 10) / 40;
+        }
     }
 
     setStats(speed, hp) { //sets speed and hp of an enemy

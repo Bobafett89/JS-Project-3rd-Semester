@@ -1,5 +1,5 @@
 class LevelLoader {
-    levels; //variable with information from Levels.json
+    jsonText; //text from Levels.json
     jsonInput;
 
     constructor() {
@@ -13,33 +13,32 @@ class LevelLoader {
         this.initTpsSetting();
     }
 
-    async fileLoad() { //function which checks if chosen file is correct, if yes parses it into "levels" and transitions to level choice
+    async fileLoad() { //function which checks if chosen file is correct, if yes copies text into "jsonText" and transitions to level choice
         let file = jsonInput.files[0];
         if(file.name == "Levels.json") {
-            this.levels = JSON.parse(await file.text());
+            this.jsonText = await file.text();
             document.getElementById("jsonLoader").hidden = true;
             document.getElementById("testMenu").hidden = false;
         }
     }
 
-    loadLevel(level) { //function which switches to a game screen
-        if(this.levels) {
-            document.getElementById("levelLoader").hidden = true;
-            document.getElementById("level").hidden = false;
-            switch(level) {
-                case 0:
-                    document.getElementById("fieldImg").src = "Assets/FieldVariants/OneLane.png";
-                    break;
-                case 1:
-                    document.getElementById("fieldImg").src = "Assets/FieldVariants/ThreeLanes.png";
-                    break;
-                default:
-                    document.getElementById("fieldImg").src = "Assets/FieldVariants/FiveLanes.png";
-                    break;
-            }
-            let waves = Object.entries(this.levels)[level][1];
-            new LevelManager(level, waves);
+    loadLevel(level) { //function which loads the level and switches to a game screen
+        let levels = JSON.parse(this.jsonText);
+        document.getElementById("levelLoader").hidden = true;
+        document.getElementById("level").hidden = false;
+        switch(level) {
+            case 0:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/OneLane.png";
+                break;
+            case 1:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/ThreeLanes.png";
+                break;
+            default:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/FiveLanes.png";
+                break;
         }
+        let waves = Object.values(levels)[level];
+        new LevelManager(level, waves);
     }
     
     setTps() {

@@ -163,6 +163,43 @@ class LevelManager {
 }
 
 class Tower {
+    id;
+    position = {x: undefined, y: undefined};
+    type;
+    hp;
+    cost;
+    buff;
+
+    constructor(id, position, type) {
+        this.id = id;
+        this.position.x = position.x;
+        this.position.y = position.y;
+        this.type = type;
+
+        switch (this.type) {
+            case "angry"://шипастый
+                this.stats(40, 5, 0);
+                break;
+            case "buff"://баффающий
+                this.stats(2, 10, 5);//how convert to tps?..
+                break;
+            case "heart": //генератор
+                this.stats(6, 2, 0);
+                break;
+            case "lazy": //замедляющий
+                this.stats(6, 7, 1000);
+                break;
+            case "shield"://обычный
+                this.stats(6, 4, 0);
+                break;
+        }
+    }
+
+    stats(hp, cost, buff) {
+            this.hp = hp;
+            this.cost = cost;
+            this.buff = buff;
+    }
 }
 
 class Projectile {

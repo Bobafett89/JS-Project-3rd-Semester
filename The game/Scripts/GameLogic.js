@@ -181,7 +181,7 @@ class Tower {
                 this.stats(40, 5, 0);
                 break;
             case "buff"://баффающий
-                this.stats(2, 10, 5);//how convert to tps?..
+                this.stats(2, 10, 5);
                 break;
             case "heart": //генератор
                 this.stats(6, 2, 0);
@@ -193,6 +193,28 @@ class Tower {
                 this.stats(6, 4, 0);
                 break;
         }
+    }
+
+    createTower(){
+        let src;
+        switch(this.type){
+            case "angry":
+                src = "Assets/Cats/angry_cat.png";
+                break;
+            case "buff":
+                src = "Assets/Cats/buff_cat.png";
+                break;
+            case "heart":
+                src = "Assets/Cats/heart_cat.png";
+                break;
+            case "lazy":
+                src = "Assets/Cats/lazy_cat.png";
+                break;
+            case "shield":
+                src = "Assets/Cats/shield_cat.png";
+                break;
+        }
+        return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;">`;
     }
 
     stats(hp, cost, buff) {

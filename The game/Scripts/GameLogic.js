@@ -35,6 +35,7 @@ class LevelManager {
         this.createCells();
         this.debug();
         this.update();
+        this.placeTower();
     }
 
     update() { //main function where most of the logic takes place and which is called each tick
@@ -243,9 +244,99 @@ class LevelManager {
             }
         }, {signal: this.buttonControl.signal});
     }
+
+    placeTower(){
+        let currCell;
+        let tempStorage = ""; // temporary storage for tower type
+        document.addEventListener("click", function(event) { //defines clicked tower
+            let targetElement = event.target;
+            while (targetElement && !targetElement.classList.contains('Selector')) {
+                targetElement = targetElement.parentElement;
+            }
+            if (targetElement && targetElement.id) {
+                Tower.type = targetElement.id;
+                tempStorage = targetElement.id;
+                console.log(Tower.type);
+            }
+        })
+
+        document.addEventListener("click", function(event) { //defines id of clicked cell
+            let targetElement = event.target;
+            while (targetElement && !targetElement.classList.contains('Cell')) {
+                targetElement = targetElement.parentElement;
+            }
+            if (targetElement && targetElement.id) {
+                currCell = targetElement.id;
+                console.log(targetElement.id)
+            }
+        })
+    }
+    /*немного хз как это распихать правильно. идея в том, 
+      что я кликаю на перса, игра это запомнинает, потом
+      я кликаю на клетку, и там ставится башня. ну я может
+      еще покумекаю над этим :З */
 }
 
 class Tower {
+    id;
+    position = {x: undefined, y: undefined};
+    type;
+    hp;
+    cost;
+    buff;
+
+    constructor(id, position, type) {
+        this.id = id;
+        this.position.x = position.x;
+        this.position.y = position.y;
+        this.type = type;
+
+        switch (this.type) {
+            case "basicCatUI"://обычный
+                this.stats(6, 4, 0);
+                break;
+            case "buff"://баффающий
+                this.stats(2, 10, 5);
+                break;
+            case "GeneratorCatUI": //генератор
+                this.stats(6, 2, 0);
+                break;
+            case "lazy": //замедляющий
+                this.stats(6, 7, 1000);
+                break;
+            case "shield"://шипастый
+                this.stats(40, 5, 0);
+                break;
+        }
+    }
+
+    stats(hp, cost, buff) {
+            this.hp = hp;
+            this.cost = cost;
+            this.buff = buff;
+    }
+
+    createTower(){
+        let src;
+        switch(this.type){
+            case "basicCatUI":
+                src = "Assets/Cats/angry_cat.png";
+                break;
+            case "buff":
+                src = "Assets/Cats/buff_cat.png";
+                break;
+            case "GeneratorCatUI":
+                src = "Assets/Cats/heart_cat.png";
+                break;
+            case "lazy":
+                src = "Assets/Cats/lazy_cat.png";
+                break;
+            case "shield":
+                src = "Assets/Cats/shield_cat.png";
+                break;
+        }
+        return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;">`;
+    }   
 }
 
 class Projectile {

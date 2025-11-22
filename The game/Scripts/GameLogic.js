@@ -41,9 +41,9 @@ class LevelManager {
         console.log(`Status: ${this.status}`);
 
         if (this.status == "running") {
+            this.enemyAction();
             this.entitiesHpManager();
             this.waveManager();
-            this.entities.enemies.forEach(lane => lane.forEach(enemy => enemy.move()));
 
             setTimeout(() => this.update(), 1000 / tps);
         } else if (this.status == "win" || this.status == "lose") {
@@ -60,6 +60,22 @@ class LevelManager {
             setTimeout(() => this.update(), 100);
         } else if (this.status == "exit") {
             this.exit();
+        }
+    }
+
+    enemyAction() {
+        for(let lane = 0; lane < this.entities.enemies.length; lane++) {
+            for(let e = 0; e < this.entities.enemies[lane].length; e++) {
+                let enemy = this.entities.enemies[lane][e];
+                let relPos =  (enemy.position.x - (this.firstCell.x - cellSize.x / 2)) / cellSize.x;
+                let cell = Math.floor(relPos);
+                let tower = this.entities.towers[lane][cell];
+                if(tower != undefined && (0 <= (relPos - cell) && (relPos - cell) <= 0.75)) {
+                   tower = enemy.action(tower);
+                } else {
+                    enemy.move();
+                }
+            }
         }
     }
 
@@ -100,7 +116,7 @@ class LevelManager {
                 let cell = idParts[2];
                 this.placeTower(lane, cell, this.chosenTower);
             }
-        });
+        }, { signal: this.buttonControl.signal });
     }
 
     placeTower(lane, cell, type) {
@@ -117,7 +133,7 @@ class LevelManager {
 
     exit() { //removes entities, eventListeners and switches screens
         this.entities.enemies.forEach(lane => lane.forEach(enemy => document.getElementById(enemy.id).remove()));
-        this.entities.towers.forEach(lane => lane.forEach(tower => document.getElementById(tower.id).remove()));
+        this.entities.towers.forEach(lane => lane.forEach(tower => tower != undefined ? document.getElementById(tower.id).remove() : {}));
         this.buttonControl.abort();
         document.getElementById("endScreen").hidden = true;
         document.getElementById("level").hidden = true;
@@ -200,25 +216,39 @@ class LevelManager {
     }
 
     entitiesHpManager() {//removes entities with no hp
+
         let enemies = this.entities.enemies;
-        let noHp = entity => entity.hp <= 0;
-        while (enemies.some(lane => lane.some(noHp))) {
-            let laneIndex = enemies.findIndex(lane => lane.some(noHp));
-            let enemyIndex = enemies[laneIndex].findIndex(noHp);
-            let enemy = this.entities.enemies[laneIndex].splice(enemyIndex, 1)[0];
+        let noEnemyHp = entity => entity.hp <= 0;
+        while (enemies.some(lane => lane.some(noEnemyHp))) {
+            let laneIndex = enemies.findIndex(lane => lane.some(noEnemyHp));
+            let enemyIndex = enemies[laneIndex].findIndex(noEnemyHp);
+            let enemy = enemies[laneIndex].splice(enemyIndex, 1)[0];
             document.getElementById(enemy.id).remove();
         }
-        let basicSprite = "Assets/Enemies/basic_enemy.png";
+
         let basicHp = enemy => (enemy.type == "Tough" && enemy.hp <= 50 && document.getElementById(enemy.id).src.includes("tough"));
         while (enemies.some(lane => lane.some(basicHp))) {
+            let basicSprite = "Assets/Enemies/basic_enemy.png";
             let laneIndex = enemies.findIndex(lane => lane.some(basicHp));
             let enemyIndex = enemies[laneIndex].findIndex(basicHp);
-            let sprite = document.getElementById(enemies[laneIndex][enemyIndex].id);
+            let enemy = enemies[laneIndex][enemyIndex];
+            let sprite = document.getElementById(enemy.id);
             sprite.src = basicSprite;
-            this.entities.enemies[laneIndex][enemyIndex].position.x += this.spriteOffset.toughEnemy.x - this.spriteOffset.basicEnemy.x;
-            this.entities.enemies[laneIndex][enemyIndex].position.y += this.spriteOffset.toughEnemy.y - this.spriteOffset.basicEnemy.y;
-            sprite.style.left = this.entities.enemies[laneIndex][enemyIndex].position.x.toString() + "px";
-            sprite.style.top = this.entities.enemies[laneIndex][enemyIndex].position.y.toString() + "px";
+            enemy.position.x += this.spriteOffset.toughEnemy.x - this.spriteOffset.basicEnemy.x;
+            enemy.position.y += this.spriteOffset.toughEnemy.y - this.spriteOffset.basicEnemy.y;
+            sprite.style.left = enemy.position.x.toString() + "px";
+            sprite.style.top = enemy.position.y.toString() + "px";
+        }
+
+        let towers = this.entities.towers;
+        let noTowerHp = tower => (tower != undefined ? tower.hp <= 0 : false);
+        while(towers.some(lane => lane.some(noTowerHp))) {
+            let laneIndex = towers.findIndex(lane => lane.some(noTowerHp));
+            let towerIndex = towers[laneIndex].findIndex(noTowerHp);
+            let tower = towers[laneIndex][towerIndex];
+            console.log(tower);
+            document.getElementById(tower.id).remove();
+            towers[laneIndex][towerIndex] = undefined;
         }
     }
 
@@ -389,6 +419,16 @@ class Enemy {
     setStats(speed, hp) { //sets speed and hp of an enemy
         this.speed = speed;
         this.hp = hp;
+    }
+
+    action(tower) {
+        if(this.attack.reload <= 0) {
+            tower.hp -= this.attack.damage
+            this.attack.reload = this.attack.speed;
+            return tower;
+        } else {
+            this.attack.reload--;
+        }
     }
 }
 

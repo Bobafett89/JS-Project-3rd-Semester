@@ -5,15 +5,12 @@ class LevelLoader {
     constructor() {
         this.jsonInput = document.getElementById("jsonInput");
         jsonInput.addEventListener("change", () => this.fileLoad());
-        document.getElementById("levelLoad1").addEventListener("click", () => this.loadLevel(0));
-        document.getElementById("levelLoad2").addEventListener("click", () => this.loadLevel(1));
-        document.getElementById("levelLoad3").addEventListener("click", () => this.loadLevel(2));
 
         this.setTps();
         this.initTpsSetting();
+        this.initScreenSetting();
         this.loadProgress();
-        this.initProgressButtons();
-        this.updateProgress();
+        this.initMenuButtons();
     }
 
     async fileLoad() { //function which checks if chosen file is correct, if yes copies text into "jsonText" and transitions to level choice
@@ -21,23 +18,26 @@ class LevelLoader {
         if(file.name == "Levels.json") {
             this.jsonText = await file.text();
             document.getElementById("jsonLoader").hidden = true;
-            document.getElementById("testMenu").hidden = false;
+            document.getElementById("mainMenu").hidden = false;
         }
     }
 
     loadLevel(level) { //function which loads the level and switches to a game screen
         let levels = JSON.parse(this.jsonText);
-        document.getElementById("levelLoader").hidden = true;
-        document.getElementById("level").hidden = false;
+        this.switchScreens("levelSelect", "titleScreen");
+        this.switchScreens("mainMenu", "level")
         switch(level) {
             case 0:
                 document.getElementById("fieldImg").src = "Assets/FieldVariants/OneLane.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
                 break;
             case 1:
                 document.getElementById("fieldImg").src = "Assets/FieldVariants/ThreeLanes.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
                 break;
             default:
                 document.getElementById("fieldImg").src = "Assets/FieldVariants/FiveLanes.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/details.png";
                 break;
         }
         let waves = Object.values(levels)[level];
@@ -71,6 +71,22 @@ class LevelLoader {
         });
     }
 
+    initScreenSetting() {
+        let checkbox = document.getElementById("fullscreenSetting");
+        checkbox.addEventListener("click", () => {
+            if(checkbox.checked) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        document.documentElement.addEventListener("fullscreenchange", () => {
+            if(document.fullscreenElement == null && checkbox.checked) {
+                checkbox.checked = false;
+            }
+        });
+    }
+
     loadProgress() {
         let progress = localStorage.getItem("level");
         if(progress === null) {
@@ -80,18 +96,33 @@ class LevelLoader {
         availableLevels = Number(progress);
     }
 
-    updateProgress() {
-        document.getElementById("debugProgress").innerHTML = `Levels passed: ${availableLevels}`;
-    }
-
-    initProgressButtons() {
-        document.getElementById("settingsProgressReset").addEventListener("click", () => this.resetProgress());
-        document.getElementById("endButton").addEventListener("click", () => this.updateProgress());
-    }
-
     resetProgress() {
         availableLevels = 0;
         localStorage.setItem("level", availableLevels);
-        this.updateProgress();
+        for(let i = 0; i < 10; i++) {
+            let progress = i == 0 ? true : false;
+            document.getElementById(`levelLoad${i}`).setAttribute("unlocked", progress);
+        }
+    }
+
+    initMenuButtons() {
+        for(let i = 0; i < 10; i++) {
+            let button = document.getElementById(`levelLoad${i}`);
+            button.addEventListener("click", () => this.loadLevel(i));
+            let progress = availableLevels >= i ? true : false;
+            button.setAttribute("unlocked", progress);
+        }
+        document.getElementById("playButton").addEventListener("click", () => this.switchScreens("titleScreen", "levelSelect"));
+        document.getElementById("levelBack").addEventListener("click", () => this.switchScreens("levelSelect", "titleScreen"));
+
+        document.getElementById("settingsButton").addEventListener("click", () => this.switchScreens("titleScreen", "settingsScreen"));
+        document.getElementById("settingsBack").addEventListener("click", () => this.switchScreens("settingsScreen", "titleScreen"));
+
+        document.getElementById("settingsProgressReset").addEventListener("click", () => this.resetProgress());
+    }
+
+    switchScreens(oldScreen, newScreen) {
+        document.getElementById(oldScreen).hidden = true;
+        document.getElementById(newScreen).hidden = false;
     }
 }

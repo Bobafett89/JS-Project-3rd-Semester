@@ -1,7 +1,8 @@
 class LevelManager {
     levelInfo = {
         currentLevel: undefined,
-        lanes: undefined
+        lanes: undefined,
+        maxLevel: 9
     };
     waveInfo = {
         waves: undefined, //array of waves
@@ -50,6 +51,11 @@ class LevelManager {
             if(this.status == "win" && availableLevels == this.levelInfo.currentLevel) {
                 localStorage.setItem("level", this.levelInfo.currentLevel + 1);
                 availableLevels = this.levelInfo.currentLevel + 1;
+                let newLevel = document.getElementById(`levelLoad${availableLevels}`);
+                console.log(newLevel);
+                if(newLevel != undefined) {
+                    newLevel.setAttribute("unlocked", true);
+                }
             }
 
             this.status = "wait";
@@ -142,7 +148,7 @@ class LevelManager {
         this.buttonControl.abort();
         document.getElementById("endScreen").hidden = true;
         document.getElementById("level").hidden = true;
-        document.getElementById("levelLoader").hidden = false;
+        document.getElementById("mainMenu").hidden = false;
     }
 
     spawnEnemy(id, lane, type) { //spawns enemy with set id, lane and type
@@ -452,7 +458,6 @@ class AudioManager {
         music: undefined,
         sfx: undefined
     };
-    defaultVol = 0.5;
     UI = {
         click: new Audio("Assets/Audio/testSound.ogg"),
         towerPlace: new Audio("Assets/Audio/testSound.ogg")
@@ -479,16 +484,16 @@ class AudioManager {
         this.volume = this.getVolume();
         this.setVolume();
         this.initVolumeSettings();
-        this.testSound();
     }
 
     getVolume() { //gets volume from the localStorage or sets default values with writing it into the localStorage
         let sfxVol = localStorage.getItem("sfxVol");
         let musicVol = localStorage.getItem("musicVol");
         if (sfxVol === null || musicVol === null) {
-            localStorage.setItem("sfxVol", this.defaultVol);
-            localStorage.setItem("musicVol", this.defaultVol);
-            return { music: this.defaultVol, sfx: this.defaultVol };
+            let defaultVol = 0.5;
+            localStorage.setItem("sfxVol", defaultVol);
+            localStorage.setItem("musicVol", defaultVol);
+            return { music: defaultVol, sfx: defaultVol };
         } else {
             return { music: Number(musicVol), sfx: Number(sfxVol) };
         }
@@ -519,12 +524,12 @@ class AudioManager {
         let sfxOutput = document.querySelector("output[for='sfxVolInput']");
 
         musicSlider.value = this.volume.music;
-        musicOutput.textContent = musicSlider.value;
+        musicOutput.textContent = Math.round(musicSlider.value * 100);
         sfxSlider.value = this.volume.sfx;
-        sfxOutput.textContent = sfxSlider.value;
+        sfxOutput.textContent = Math.round(sfxSlider.value * 100);
 
-        musicSlider.addEventListener("input", () => musicOutput.textContent = musicSlider.value);
-        sfxSlider.addEventListener("input", () => sfxOutput.textContent = sfxSlider.value);
+        musicSlider.addEventListener("input", () => musicOutput.textContent = Math.round(musicSlider.value * 100));
+        sfxSlider.addEventListener("input", () => sfxOutput.textContent = Math.round(sfxSlider.value * 100));
         document.getElementById("settingsApply").addEventListener("click", () => {
             this.volume.music = Number(musicSlider.value);
             this.volume.sfx = Number(sfxSlider.value);
@@ -534,21 +539,9 @@ class AudioManager {
         });
         document.getElementById("settingsCancel").addEventListener("click", () => {
             musicSlider.value = this.volume.music;
-            musicOutput.textContent = musicSlider.value;
+            musicOutput.textContent = Math.round(musicSlider.value * 100);
             sfxSlider.value = this.volume.sfx;
-            sfxOutput.textContent = sfxSlider.value;
+            sfxOutput.textContent = Math.round(sfxSlider.value * 100);
         });
-        document.getElementById("settingsVolumeReset").addEventListener("click", () => this.resetVolume());
-    }
-
-    resetVolume() { //resets volume to default values
-        this.volume.music = this.defaultVol;
-        this.volume.sfx = this.defaultVol;
-        document.getElementById("settingsCancel").click();
-        document.getElementById("settingsApply").click();
-    }
-
-    testSound() { //temporary function to test sound
-        document.getElementById("settingsTest").addEventListener("click", () => this.UI.click.play());
     }
 }

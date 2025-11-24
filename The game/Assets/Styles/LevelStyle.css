@@ -6,6 +6,9 @@
     justify-items: center;
     align-items: center;
     background: linear-gradient(rgba(255, 123, 103, 0.29), rgba(255, 98, 122, 0.29));
+    &>div>span {
+        font-size: 50px;
+    }
 }
 
 #currency {

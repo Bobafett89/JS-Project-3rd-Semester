@@ -2,7 +2,7 @@ class LevelManager {
     levelInfo = {
         currentLevel: undefined,
         lanes: undefined,
-        maxLevel: 9
+        maxLevel: 10
     };
     waveInfo = {
         waves: undefined, //array of waves
@@ -51,10 +51,8 @@ class LevelManager {
             if(this.status == "win" && availableLevels == this.levelInfo.currentLevel) {
                 localStorage.setItem("level", this.levelInfo.currentLevel + 1);
                 availableLevels = this.levelInfo.currentLevel + 1;
-                let newLevel = document.getElementById(`levelLoad${availableLevels}`);
-                console.log(newLevel);
-                if(newLevel != undefined) {
-                    newLevel.setAttribute("unlocked", true);
+                if(availableLevels < this.levelInfo.maxLevel) {
+                    document.getElementById(`levelLoad${availableLevels}`).hidden = false;
                 }
             }
 
@@ -107,11 +105,33 @@ class LevelManager {
         document.getElementById("exitUI").addEventListener("click", () => this.status = "exit", { signal: this.buttonControl.signal });
         document.getElementById("endButton").addEventListener("click", () => this.status = "exit", { signal: this.buttonControl.signal });
 
-        document.getElementById("generatorCatUI").addEventListener("click", () => this.chosenTower = "Generator", { signal: this.buttonControl.signal });
-        document.getElementById("basicCatUI").addEventListener("click", () => this.chosenTower = "Basic", { signal: this.buttonControl.signal });
-        document.getElementById("buffCatUI").addEventListener("click", () => this.chosenTower = "Buff", { signal: this.buttonControl.signal });
-        document.getElementById("spikeCatUI").addEventListener("click", () => this.chosenTower = "Spike", { signal: this.buttonControl.signal });
-        document.getElementById("freezingCatUI").addEventListener("click", () => this.chosenTower = "Freezing", { signal: this.buttonControl.signal });
+        for(let i = 0; i < 5; i++) {
+            let cat;
+            switch(i) {
+                case 0:
+                    cat = "Generator";
+                    break;
+                case 1:
+                    cat = "Basic";
+                    break;
+                case 2:
+                    cat = "Buff";
+                    break;
+                case 3:
+                    cat = "Spike";
+                    break;
+                case 4:
+                    cat = "Freezing";
+                    break;
+                }
+                let chosen = cat == "Generator" ? true : false;
+                document.getElementById(`${cat}CatUI`).addEventListener("click", () => {
+                    document.getElementById(`${this.chosenTower}CatUI`).setAttribute("chosen", false);
+                    this.chosenTower = cat;
+                    document.getElementById(`${cat}CatUI`).setAttribute("chosen", true);
+                }, { signal: this.buttonControl.signal });
+                document.getElementById(`${cat}CatUI`).setAttribute("chosen", chosen);
+            }
         
         document.addEventListener("click", (event) => {
             if(event.target.className == "Cell") {

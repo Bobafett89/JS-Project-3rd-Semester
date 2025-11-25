@@ -24,23 +24,11 @@ class LevelLoader {
 
     loadLevel(level) { //function which loads the level and switches to a game screen
         let levels = JSON.parse(this.jsonText);
+        let waves = Object.values(levels)[level];
+
         this.switchScreens("levelSelect", "titleScreen");
         this.switchScreens("mainMenu", "level")
-        switch(level) {
-            case 0:
-                document.getElementById("fieldImg").src = "Assets/FieldVariants/OneLane.png";
-                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
-                break;
-            case 1:
-                document.getElementById("fieldImg").src = "Assets/FieldVariants/ThreeLanes.png";
-                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
-                break;
-            default:
-                document.getElementById("fieldImg").src = "Assets/FieldVariants/FiveLanes.png";
-                document.getElementById("fieldDetails").src = "Assets/UI/details.png";
-                break;
-        }
-        let waves = Object.values(levels)[level];
+        this.levelUnlocks(level);
         new LevelManager(level, waves);
     }
     
@@ -100,18 +88,20 @@ class LevelLoader {
         availableLevels = 0;
         localStorage.setItem("level", availableLevels);
         for(let i = 0; i < 10; i++) {
-            let progress = i == 0 ? true : false;
-            document.getElementById(`levelLoad${i}`).setAttribute("unlocked", progress);
+            let progress = availableLevels >= i ? false : true;
+            document.getElementById(`levelLoad${i}`).hidden = progress;
         }
     }
 
     initMenuButtons() {
         for(let i = 0; i < 10; i++) {
             let button = document.getElementById(`levelLoad${i}`);
+            let progress = availableLevels >= i ? false : true;
+
             button.addEventListener("click", () => this.loadLevel(i));
-            let progress = availableLevels >= i ? true : false;
-            button.setAttribute("unlocked", progress);
+            button.hidden = progress;
         }
+
         document.getElementById("playButton").addEventListener("click", () => this.switchScreens("titleScreen", "levelSelect"));
         document.getElementById("levelBack").addEventListener("click", () => this.switchScreens("levelSelect", "titleScreen"));
 
@@ -124,5 +114,25 @@ class LevelLoader {
     switchScreens(oldScreen, newScreen) {
         document.getElementById(oldScreen).hidden = true;
         document.getElementById(newScreen).hidden = false;
+    }
+
+    levelUnlocks(level) {
+        switch(level) {
+            case 0:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/OneLane.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
+                break;
+            case 1:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/ThreeLanes.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/detailsTwoLevels.png";
+                break;
+            default:
+                document.getElementById("fieldImg").src = "Assets/FieldVariants/FiveLanes.png";
+                document.getElementById("fieldDetails").src = "Assets/UI/details.png";
+                break;
+        }
+        document.getElementById("BuffCatUI").hidden = level < 2;
+        document.getElementById("SpikeCatUI").hidden = level < 4;
+        document.getElementById("FreezingCatUI").hidden = level < 7;
     }
 }

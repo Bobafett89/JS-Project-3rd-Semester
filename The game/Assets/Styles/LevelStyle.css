@@ -10,6 +10,16 @@
         font-size: 50px;
     }
 }
+#exitUI {
+    cursor: pointer;
+    grid-column-start: 7;
+    &:hover {
+        filter: contrast(0.75);
+    }
+    &:active {
+        filter: contrast(1);
+    }
+}
 
 #currency {
     display: grid;
@@ -19,11 +29,18 @@
 }
 
 .Selector {
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
+    &[hidden] {
+        display: none;
+    }
+    &[chosen="false"] {
+        filter: brightness(0.5);
+    }
 }
 
 #border {

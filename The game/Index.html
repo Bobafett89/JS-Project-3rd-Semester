@@ -36,9 +36,13 @@
                 <div>
                     <button id="settingsCancel">Cancel</button>
                     <button id="settingsApply">Apply</button>
+                    <button id="settingsVolumeReset">Reset volume</button>
                     <button id="settingsTest">Sound test</button>
+                    <button id="settingsProgressReset">Reset progress</button>
                 </div>
-                <span style="font-size: 40px; color: yellow;">To kill enemy press "S"</span>
+                <span style="font-size: 40px; color: blue;">To kill enemy press "S"</span>
+                <span style="font-size: 40px; color: blue;">To damage enemy press "D"</span>
+                <span id="debugProgress" style="font-size: 40px; color: blue;">Levels passed: 0</span>
             </div>
         </div>
 
@@ -54,23 +58,30 @@
 
             <div id="levelUI">
                 <div id="currency">
-                    <img id="currencyImg" src="Assets/heart.png">
+                    <img id="currencyImg" src="Assets/UI/currencyIcon.png">
                     <span id="currencyCounter" style="align-self: start; font-size: 50px;">50</span>
                 </div>
-                <div id="GeneratorCatUI" class="Selector">
-                    <img id="GeneratorCatImg" src="Assets/Cats/generator_cat.png">
+                <div id="generatorCatUI" class="Selector">
+                    <img id="GeneratorCatImg" src="Assets/UI/generatorIcon.png">
                 </div>
                 <div id="basicCatUI" class="Selector">
-                    <img id="basicTowerImg" src="Assets/Cats/basic_cat.png">
+                    <img id="basicCatImg" src="Assets/UI/basicIcon.png">
                 </div>
                 <div id="buffCatUI" class="Selector">
+                    <img id="buffCatImg" src="Assets/UI/buffIcon.png">
                 </div>
-                <div id="spikeCatlUI" class="Selector">
+                <div id="spikeCatUI" class="Selector">
+                    <img id="spikeCatImg" src="Assets/UI/spikeIcon.png">
                 </div>
                 <div id="freezingCatUI" class="Selector">
+                    <img id="freezingCatImg" src="Assets/UI/freezingIcon.png">
                 </div>
-                <span id="exitUI" style="font-size: 100px;">❌</span>
+                <div id="exitUI">
+                    <img id="exitImg" src="Assets/UI/pauseIcon.png">
+                </div>
             </div>
+
+            <div id="border"></div>
 
             <div id="gameScreen">
                 <div id="field">
@@ -83,6 +94,7 @@
         <script>
             var tps; //ticks per seconds - similiar to frames per second
             var cellSize = {x: 196, y: 133}; //object which stores size of the cells in pixels
+            var availableLevels;
             var audioManager = new AudioManager();
             new LevelLoader();
         </script>

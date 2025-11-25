@@ -338,12 +338,15 @@ class Tower {
     hp;
     cost;
     buff;
+    damage;
+    attackRecharge;
 
     constructor(id, position, type) {
         this.id = id;
         this.position.x = position.x;
         this.position.y = position.y;
         this.type = type;
+        this.attackRecharge = 0;
 
         switch (this.type) {
             case "basicCatUI"://обычный
@@ -373,27 +376,127 @@ class Tower {
     createTower(){
         let src;
         switch(this.type){
-            case "basicCatUI":
-                src = "Assets/Cats/angry_cat.png";
+            case "Basic":
+                src = "Assets/Cats/Basic/basicIdle.png";
                 break;
-            case "buff":
-                src = "Assets/Cats/buff_cat.png";
+            case "Buff":
+                src = "Assets/Cats/Buff/buffIdle.png";
                 break;
-            case "GeneratorCatUI":
-                src = "Assets/Cats/heart_cat.png";
+            case "Generator":
+                src = "Assets/Cats/Generator/generatorIdle.png";
                 break;
-            case "lazy":
-                src = "Assets/Cats/lazy_cat.png";
+            case "Freezing":
+                src = "Assets/Cats/Freezing/freezingIdle.png";
                 break;
-            case "shield":
-                src = "Assets/Cats/shield_cat.png";
+            case "Spike":
+                src = "Assets/Cats/Spike/spikeIdle.png";
                 break;
         }
         return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;">`;
-    }   
+    }  
+    
+    action(enemy){
+        let actionResult;
+        let newProjectile;
+        //if (this.attackRecharge == 0){
+            switch(this.type){
+                case "Basic":
+                    let targetEnemyBasic = this.findTarget(enemy)
+                    if (targetEnemyBasic){
+                        let projectile = new Projectile('basicProjectile', 1, 10, targetEnemyBasic, this.position.x);
+                        actionResult = projectile;
+                        projectile.move();
+                    } else { 
+                        console.log("no target")
+                    }
+                    break;
+                case "Generator":
+                    //
+                    break;
+                case "Buff":
+                    //
+                    break;
+                case "Spike":
+                    //
+                    break;
+                case "Freezing":
+                    newProjectile = this.newProj("FreezingProjectile");
+                    console.log(`created ${newProjectile}`)
+                    break;
+            }
+        //}
+    }
+
+    newProj(type){let prt = new Projectile(type, speed)}
+
+    findTarget(enemy){
+        let closestTarget = null;
+        let minX = 10000;
+        if (enemy.position.x < minX){
+                minX = enemy.position.x;
+                closestTarget = enemy;
+            }
+        return closestTarget;
+    }
+
+    /*towerAction(){
+        let enemy;
+        for(let lane = 0; lane < this.entities.enemies.length; lane++) {
+            for(let e = 0; e < this.entities.enemies[lane].length; e++) {
+                enemy = this.entities.enemies[lane][e]; 
+            }
+        }
+
+        for(let lane = 0; lane < this.entities.towers.length; lane++) {
+            for(let e = 0; e < this.entities.towers[lane].length; e++) {
+                let tower = this.entities.towers[lane][e];
+                if (tower) {
+                    if ((enemy.position.x - tower.position.x) < 900) {
+                        tower.action(enemy);
+                        //tower.findTarget(enemy)
+                        //console.log((enemy.position.x - tower.position.x))
+                        //tower.findTarget(enemy, lane);
+                    }
+                }
+               
+            }
+        }
+    }
+        
+    this.towerAction();*/
 }
 
 class Projectile {
+    projectileX;
+    damage;
+    speed;
+    target;
+    type;
+    constructor(type, speed, damage, target, projectileX){
+        this.projectileX = projectileX;
+        this.type = type;
+        this.speed = speed;
+        this.damage = damage;
+        this.target = target;
+        console.log(`Projectile. type: ${this.type} ${this.projectileX}`)
+    }
+
+    createProjectile(){
+        switch(this.type){
+            case "basicProjectile":
+                src = "Assets/Cats/Basic/basicIdle.png";
+                break;
+            case "freezing projectile":
+                src = "Assets/Cats/Basic/basicIdle.png";
+                break;
+        }
+    }
+
+    move(){
+        this.projectileX += this.speed;
+        console.log(`mooving...: ${this.projectileX}`)
+
+    }
 }
 
 class Enemy {

@@ -48,6 +48,7 @@ class LevelManager {
             this.enemyAction();
             this.entitiesHpManager();
             this.waveManager();
+            //this.towerAction();
 
             setTimeout(() => this.update(), 1000 / tps);
         } else if (this.status == "win" || this.status == "lose") {
@@ -361,30 +362,30 @@ class Tower {
     hp;
     cost;
     buff;
-    damage;
-    attackRecharge;
+    attack = {
+        reload: tps / 2,
+        speed: tps / 2 }
 
     constructor(id, position, type) {
         this.id = id;
         this.position.x = position.x;
         this.position.y = position.y;
         this.type = type;
-        this.attackRecharge = 0;
 
         switch (this.type) {
-            case "basicCatUI"://обычный
+            case "Basic"://обычный
                 this.stats(6, 4, 0);
                 break;
-            case "buff"://баффающий
+            case "Buff"://баффающий
                 this.stats(2, 10, 5);
                 break;
-            case "GeneratorCatUI": //генератор
+            case "Generator": //генератор
                 this.stats(6, 2, 0);
                 break;
-            case "lazy": //замедляющий
+            case "Freezing": //замедляющий
                 this.stats(6, 7, 1000);
                 break;
-            case "shield"://шипастый
+            case "Spike"://шипастый
                 this.stats(40, 5, 0);
                 break;
         }
@@ -419,50 +420,36 @@ class Tower {
     }  
     
     action(enemy){
-        let actionResult;
         let newProjectile;
-        //if (this.attackRecharge == 0){
+        if (this.attack.reload <= 0) {
             switch(this.type){
                 case "Basic":
-                    let targetEnemyBasic = this.findTarget(enemy)
-                    if (targetEnemyBasic){
-                        let projectile = new Projectile('basicProjectile', 1, 10, targetEnemyBasic, this.position.x);
-                        actionResult = projectile;
-                        projectile.move();
-                    } else { 
-                        console.log("no target")
-                    }
+                    newProjectile = new Projectile('basicProjectile');
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Generator":
-                    //
+                    LevelManager.currency += 1;
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Buff":
-                    //
+                    //a
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Spike":
-                    //
+                    enemy.hp -= 20; //20 - amount of damage
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Freezing":
-                    newProjectile = this.newProj("FreezingProjectile");
-                    console.log(`created ${newProjectile}`)
+                    newProjectile = new Projectile("FreezingProjectile");
+                    this.attack.reload = this.attack.speed;
                     break;
             }
-        //}
+        } else {
+            this.attack.reload--
+        }
     }
 
-    newProj(type){let prt = new Projectile(type, speed)}
-
-    findTarget(enemy){
-        let closestTarget = null;
-        let minX = 10000;
-        if (enemy.position.x < minX){
-                minX = enemy.position.x;
-                closestTarget = enemy;
-            }
-        return closestTarget;
-    }
-
-    /*towerAction(){
+        /*towerAction(){
         let enemy;
         for(let lane = 0; lane < this.entities.enemies.length; lane++) {
             for(let e = 0; e < this.entities.enemies[lane].length; e++) {
@@ -474,34 +461,44 @@ class Tower {
             for(let e = 0; e < this.entities.towers[lane].length; e++) {
                 let tower = this.entities.towers[lane][e];
                 if (tower) {
-                    if ((enemy.position.x - tower.position.x) < 900) {
-                        tower.action(enemy);
-                        //tower.findTarget(enemy)
-                        //console.log((enemy.position.x - tower.position.x))
-                        //tower.findTarget(enemy, lane);
-                    }
+                    switch(tower.type){
+                        case "Generator":
+                            console.log(this.currency)
+                            this.currency+=1;
+                            break;
+                        case "Basic":
+                            if ((enemy.position.x - tower.position.x) < 900) {
+                                tower.action(enemy);
+                                //tower.findTarget(enemy)
+                                //console.log((enemy.position.x - tower.position.x))
+                                //tower.findTarget(enemy, lane);
+                            }   
+                    } 
                 }
-               
             }
         }
-    }
-        
-    this.towerAction();*/
+    }*/
 }
 
 class Projectile {
-    projectileX;
-    damage;
-    speed;
-    target;
+    id;
+    position = {x: undefined, y: undefined}
     type;
-    constructor(type, speed, damage, target, projectileX){
-        this.projectileX = projectileX;
+    damage;
+    constructor(id, position, type){
+        this.id = id;
+        this.position.x = position.x;
+        this.position.y = position.y;
         this.type = type;
-        this.speed = speed;
-        this.damage = damage;
-        this.target = target;
         console.log(`Projectile. type: ${this.type} ${this.projectileX}`)
+
+        switch(this.type){
+            case "BasicProjectile":
+                this.damage = 10;
+                break;
+            case "FreezingProjectile":
+                this.damage = 5;
+        }
     }
 
     createProjectile(){
@@ -509,16 +506,24 @@ class Projectile {
             case "basicProjectile":
                 src = "Assets/Cats/Basic/basicIdle.png";
                 break;
-            case "freezing projectile":
+            case "freezingProjectile":
                 src = "Assets/Cats/Basic/basicIdle.png";
                 break;
         }
+
+        return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;">`;
     }
 
     move(){
-        this.projectileX += this.speed;
-        console.log(`mooving...: ${this.projectileX}`)
+        let sprite = document.getElementById(this.id);
+        this.position.x += this.speed * cellSize.x / tps;
+        sprite.style.left = this.position.x.toString() + "px";
+    }
 
+    action(enemy){
+        enemy.hp -= this.damage;
+        if (this.type == "FreezingProjectile")
+            enemy.freeze = true;
     }
 }
 

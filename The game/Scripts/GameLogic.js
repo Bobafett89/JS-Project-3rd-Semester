@@ -48,6 +48,7 @@ class LevelManager {
             this.enemyAction();
             this.entitiesHpManager();
             this.waveManager();
+            this.towerAction();
 
             setTimeout(() => this.update(), 1000 / tps);
         } else if (this.status == "win" || this.status == "lose") {
@@ -250,6 +251,49 @@ class LevelManager {
         this.spawnEnemy(`e_${type}_${waveNumber}_${idLeft}`, randomLane, type);
     }
 
+    towerAction(){
+        for(let lane = 0; lane < this.entities.towers.length; lane++) {
+            for(let t = 0; t < this.entities.towers[lane].length; t++) {
+                let tower = this.entities.towers[lane][t];
+                if (tower) {
+                    switch(tower.type){
+                        case "Generator":
+                            tower.action(this);
+                            break;
+                        case "Basic":
+                            if (this.entities.enemies[lane].length > 0) {
+                                tower.action(this.entities.projectiles[lane]);
+                            } 
+                            break;
+                        case "Buff":
+                            let buffedTowers = [];
+                            for (let i = -1; i < 2; i++){
+                                if ( !(lane == 0 && i == -1) && !(lane == this.levelInfo.lanes-1 && i == 1)){
+                                    for (let j = -1; j<2; j ++){
+                                        if ( !(t == 0 && j == -1) && !(t == 8 && j == 1)){
+                                            let checkedTower = this.entities.towers[lane+i][t+j];
+                                            if (checkedTower != undefined && checkedTower.type != "Buff");
+                                                buffedTowers.push(this.entities.towers[lane+i][t+j]);
+                                        }
+                                    }
+                                }
+                            }
+                            tower.action(buffedTowers);
+                            break;
+                        case "Spike":
+                            let attackedEnemies = [];
+                            for (let i = 0; i < this.entities.enemies[lane].length; i++) {
+                                let dist =  this.entities.enemies[lane][i].position.x - tower.position.x;
+                                if (dist >=0 && dist <= 0.75*cellSize.x) {attackedEnemies.push(this.entities.enemies[lane][i])}
+                            }
+                            tower.action(attackedEnemies);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
     waveManager() { //spawns and progresses waves and checks lose and win conditions
         if (this.waveInfo.currentWave < this.waveInfo.waves.length) {
             let wave = this.waveInfo.waves[this.waveInfo.currentWave];
@@ -365,7 +409,6 @@ class Tower {
     attack = {
         reload: tps / 2,
         speed: tps / 2 }
-    buffed = false;
 
     lane;
     cell;
@@ -381,27 +424,29 @@ class Tower {
 
         switch (this.type) {
             case "Basic"://обычный
-                this.stats(6, 4, 0);
+                this.stats(6, 4, 0, 2);
                 break;
             case "Buff"://баффающий
-                this.stats(2, 10, 5);
+                this.stats(2, 10, 1, 3);
                 break;
             case "Generator": //генератор
-                this.stats(6, 2, 0);
+                this.stats(6, 2, 0, 2);
                 break;
             case "Freezing": //замедляющий
-                this.stats(6, 7, 0);
+                this.stats(6, 7, 0, 2);
                 break;
             case "Spike"://шипастый
-                this.stats(40, 5, 0);
+                this.stats(40, 5, 0, 2);
                 break;
         }
     }
 
-    stats(hp, cost, buff) {
+    stats(hp, cost, buff, reload) {
             this.hp = hp;
             this.cost = cost;
             this.buff = buff;
+            this.attack.reload = reload * tps;
+            this.attack.speed = reload * tps;
     }
 
     createTower(){
@@ -427,7 +472,6 @@ class Tower {
     }  
     
     action(object){ //actions of different towers
-        if (this.curBuff<=0) {this.buffed = false}
         if (this.attack.reload <= 0) {
             switch(this.type){
                 case "Basic": //creating projectile of basic cat
@@ -439,70 +483,46 @@ class Tower {
                     this.projectileCounter++;
                     let projectileB = new Projectile(idB, positionB, "BasicProjectile");
                     object.push(projectileB);
-                    if (this.buffed)
-                        this.attack.reload = this.attack.speed/2;
-                    else
-                        this.attack.reload = this.attack.speed;
+                    this.attack.reload = this.attack.speed;
                     //console.log(projectileB);
                     break;
                 case "Generator": //generating currency
                     object.currency ++
-                    if (this.buffed)
-                        this.attack.reload = this.attack.speed/2;
-                    else
-                        this.attack.reload = this.attack.speed;
+                    document.getElementById("currencyCounter").innerHTML = object.currency;
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Buff":
-                    this.curBuff = this.buff * tps;
-                    buffed = true;
+                    for (let i = 0; i < object.length; i++){
+                        object[i].curBuff = this.buff * tps;
+                    }
                     this.attack.reload = this.attack.speed;
                     break;
                 case "Spike":
-                    object.hp -= 20; //20 - amount of damage
-                    if (this.buffed)
-                        this.attack.reload = this.attack.speed/2;
-                    else
-                        this.attack.reload = this.attack.speed;
+                    for (let i = 0; i < object.length; i++)
+                        object[i].hp -= 20; //20 - amount of damage
+                    this.attack.reload = this.attack.speed;
                     break;
                 case "Freezing": //creating projectile of freezing cat
                     let positionF = {
                         x: this.position.x,
                         y: this.position.y
                     }
-                    let idF = `p_${"FreeezingProjectile"}_${this.lane}_${this.cell}`;
+                    let idF = `p_${"FreeezingProjectile"}_${this.lane}_${this.cell}_${this.projectileCounter}`;
                     let projectileF = new Projectile(idF, positionF, "FreeezingProjectile");
                     object.entities.projectiles[this.lane][this.cell].push(projectileF);
-                    if (this.buffed)
-                        this.attack.reload = this.attack.speed/2;
-                    else
-                        this.attack.reload = this.attack.speed;
+                    this.attack.reload = this.attack.speed;
                     break;
             }
         } else {
-            this.attack.reload--
+            if (this.curBuff > 0){
+                this.attack.reload -= 2;
+                this.curBuff--;
+            } else {this.attack.reload--}
+
         }
     }
 
-    /*towerAction(){
-        for(let lane = 0; lane < this.entities.towers.length; lane++) {
-            for(let e = 0; e < this.entities.towers[lane].length; e++) {
-                let tower = this.entities.towers[lane][e];
-                if (tower) {
-                    switch(tower.type){
-                        case "Generator":
-                            tower.action(this)
-                            console.log(this.currency)
-                            break;
-                        case "Basic":
-                            if (this.entities.enemies[lane].length > 0) {
-                                tower.action(this.entities.projectiles[lane]);
-                            } 
-                            break;
-                    }
-                }
-            }
-        }
-    }*/
+    /**/
 }
 
 class Projectile {

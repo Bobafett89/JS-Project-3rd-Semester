@@ -54,12 +54,18 @@ class LevelManager {
         } else if (this.status == "win" || this.status == "lose") {
             document.getElementById("endScreen").hidden = false;
             document.getElementById("endMessage").innerHTML = (this.status == "win") ? ("Victory!!!") : ("Defeat...");
-            if(this.status == "win" && availableLevels == this.levelInfo.currentLevel) {
-                localStorage.setItem("level", this.levelInfo.currentLevel + 1);
-                availableLevels = this.levelInfo.currentLevel + 1;
-                if(availableLevels < this.levelInfo.maxLevel) {
-                    document.getElementById(`levelLoad${availableLevels}`).hidden = false;
+            if(this.status == "win") {
+                audioManager.end.win.play();
+
+                if(availableLevels == this.levelInfo.currentLevel) {
+                    let newLevel = this.levelInfo.currentLevel + 1;
+
+                    localStorage.setItem("level", newLevel);
+                    availableLevels = newLevel;
+                    document.getElementById(`levelLoad${availableLevels}`).hidden = availableLevels >= this.levelInfo.maxLevel;
                 }
+            } else {
+                audioManager.end.lose.play();
             }
 
             this.status = "wait";
@@ -72,15 +78,15 @@ class LevelManager {
     }
 
     enemyAction() { //performs enemies' actions
-        for(let lane = 0; lane < this.entities.enemies.length; lane++) {
-            for(let e = 0; e < this.entities.enemies[lane].length; e++) {
+        for (let lane = 0; lane < this.entities.enemies.length; lane++) {
+            for (let e = 0; e < this.entities.enemies[lane].length; e++) {
                 let enemy = this.entities.enemies[lane][e];
                 let relPos =  (enemy.position.x - (this.firstCell.x - cellSize.x / 2)) / cellSize.x;
                 let cell = Math.floor(relPos);
                 let tower = this.entities.towers[lane][cell];
 
                 if(tower != undefined && (0 <= (relPos - cell) && (relPos - cell) <= 0.75)) {
-                   tower = enemy.action(tower);
+                   enemy.action(tower);
                    if(document.getElementById(enemy.id).src.includes("tough") && enemy.position.y != enemy.jump.ground) {
                     enemy.position.y = enemy.jump.ground;
                     document.getElementById(enemy.id).style.top = enemy.position.y.toString() + "px";
@@ -115,7 +121,7 @@ class LevelManager {
         document.getElementById("exitUI").addEventListener("click", () => this.status = "exit", { signal: this.buttonControl.signal });
         document.getElementById("endButton").addEventListener("click", () => this.status = "exit", { signal: this.buttonControl.signal });
 
-        for(let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) {
             let cat;
             switch(i) {
                 case 0:
@@ -134,14 +140,14 @@ class LevelManager {
                     cat = "Freezing";
                     break;
                 }
-                let chosen = cat == "Generator" ? true : false;
+                let chosen = cat == "Generator";
                 document.getElementById(`${cat}CatUI`).addEventListener("click", () => {
                     document.getElementById(`${this.chosenTower}CatUI`).setAttribute("chosen", false);
                     this.chosenTower = cat;
                     document.getElementById(`${cat}CatUI`).setAttribute("chosen", true);
                 }, { signal: this.buttonControl.signal });
                 document.getElementById(`${cat}CatUI`).setAttribute("chosen", chosen);
-            }
+        }
         
         document.addEventListener("click", (event) => {
             if(event.target.className == "Cell") {
@@ -186,6 +192,7 @@ class LevelManager {
                 document.getElementById("gameScreen").innerHTML += tower.createTower();
                 this.currency -= tower.cost;
                 document.getElementById("currencyCounter").innerHTML = this.currency;
+                audioManager.UI.towerPlace.play();
             }
         }
     } 
@@ -332,6 +339,7 @@ class LevelManager {
             let enemy = enemies[laneIndex].splice(enemyIndex, 1)[0];
 
             document.getElementById(enemy.id).remove();
+            audioManager.death.enemy.play();
         }
 
         let basicHp = enemy => (enemy.type == "Tough" && enemy.hp <= 50 && document.getElementById(enemy.id).src.includes("tough"));
@@ -359,6 +367,7 @@ class LevelManager {
 
             document.getElementById(tower.id).remove();
             towers[laneIndex][towerIndex] = undefined;
+            audioManager.death.tower.play();
         }
     }
 
@@ -666,11 +675,11 @@ class Enemy {
         this.hp = hp;
     }
 
-    action(tower) { //returns damaged tower if ready to attack
+    action(tower) { //damages tower if ready to attack
         if(this.attack.reload <= 0) {
-            tower.hp -= this.attack.damage
+            audioManager.hit.tower.play();
+            tower.hp -= this.attack.damage;
             this.attack.reload = this.attack.speed;
-            return tower;
         } else {
             this.attack.reload--;
         }
@@ -696,7 +705,7 @@ class AudioManager {
         tower: new Audio("Assets/Audio/tower_was_attacked.ogg")
     };
     death = {
-        enemy: new Audio(),
+        enemy: new Audio("Assets/Audio/testSound.ogg"),
         tower: new Audio("Assets/Audio/tower_defeat.ogg")
     };
     end = {
@@ -737,6 +746,9 @@ class AudioManager {
 
         this.hit.enemy.volume = this.volume.sfx;
         this.hit.tower.volume = this.volume.sfx;
+
+        this.death.enemy.volume = this.volume.sfx;
+        this.death.tower.volume = this.volume.sfx;
 
         this.end.win.volume = this.volume.sfx;
         this.end.lose.volume = this.volume.sfx;

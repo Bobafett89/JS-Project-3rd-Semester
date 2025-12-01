@@ -22,8 +22,11 @@ class LevelManager {
         buffTower: { x: 104, y: 96},
         spikeTower: { x: 136, y: 112},
         freezingTower: { x: 112, y: 80},
-        basicEnemy: { x: 53, y: 53 },
-        toughEnemy: { x: 95, y: 69 }
+        basicEnemy: { x: 54, y: 55 },
+        toughEnemy: { x: 96, y: 70 },
+        fastEnemy: {x: 54, y: 55},
+        basicProjectile: {x: 54, y: 33},
+        freezingProjectile: {x: 54, y: 33}
     }; //halfed dimensions of sprites which are used to place entities correctly
     buttonControl = new AbortController(); //object which is used to delete all created eventListeners inside LevelManager
     chosenTower = "Generator";
@@ -94,6 +97,7 @@ class LevelManager {
                 } else {
                     enemy.move();
                 }
+                enemy.stateChange();
             }
         }
     }
@@ -219,7 +223,7 @@ class LevelManager {
                 offset = this.spriteOffset.toughEnemy.y;
                 break;
             case "Fast":
-                offset = this.spriteOffset.basicEnemy.y;
+                offset = this.spriteOffset.fastEnemy.y;
                 break;
         }
         let position = {
@@ -344,7 +348,7 @@ class LevelManager {
 
         let basicHp = enemy => (enemy.type == "Tough" && enemy.hp <= 50 && document.getElementById(enemy.id).src.includes("tough"));
         while (enemies.some(lane => lane.some(basicHp))) {
-            let basicSprite = "Assets/Enemies/basic_enemy.png";
+            let basicSprite = "Assets/Enemies/basic.png";
             let laneIndex = enemies.findIndex(lane => lane.some(basicHp));
             let enemyIndex = enemies[laneIndex].findIndex(basicHp);
             let enemy = enemies[laneIndex][enemyIndex];
@@ -372,12 +376,12 @@ class LevelManager {
     }
 
     debug() { //temporary function to debug
-        window.addEventListener("keydown", (event) => { // kill enemies with a press of the key "S"
+        window.addEventListener("keydown", (event) => { // kill enemy with a press of the key "S"
             if (event.code == "KeyS") {
                 let enemies = this.entities.enemies;
                 for (let i = 0; i < enemies.length; i++) {
                     if (enemies[i].length > 0) {
-                        let enemy = this.entities.enemies[i].pop();
+                        let enemy = this.entities.enemies[i].shift();
                         document.getElementById(enemy.id).remove();
                         break;
                     }
@@ -386,7 +390,7 @@ class LevelManager {
         }, { signal: this.buttonControl.signal });
 
 
-        window.addEventListener("keydown", (event) => { //damage enemies with a press of the key "D"
+        window.addEventListener("keydown", (event) => { //damage enemy with a press of the key "D"
             if (event.code == "KeyD") {
                 let enemies = this.entities.enemies;
                 for (let i = 0; i < enemies.length; i++) {
@@ -398,7 +402,7 @@ class LevelManager {
             }
         }, { signal: this.buttonControl.signal });
 
-        window.addEventListener("keydown", (event) => {
+        window.addEventListener("keydown", (event) => { //win by pressing "W" and lose by pressing "L"
             if(event.code == "KeyW") {
                 this.status = "win";
             }
@@ -407,12 +411,21 @@ class LevelManager {
             }
         }, {signal: this.buttonControl.signal});
 
-        window.addEventListener("keydown", (event) => {
+        window.addEventListener("keydown", (event) => { //add currency by pressing "A"
             if(event.code == "KeyA") {
                 this.currency++;
                 document.getElementById("currencyCounter").innerHTML = this.currency;
             }
         }, { signal: this.buttonControl.signal});
+
+        window.addEventListener("keydown", (event) => { //freeze all enemies by pressing "F"
+            if (event.code == "KeyF") {
+                let enemies = this.entities.enemies;
+                for(let lane = 0; lane < this.levelInfo.lanes; lane++) {
+                    enemies[lane].forEach(enemy => enemy.freeze = true);
+                }
+            }
+        }, { signal: this.buttonControl.signal });
     }
 }
 
@@ -604,6 +617,7 @@ class Enemy {
     id;
     type;
     speed; //speed of an enemy in cells per second
+    rotationSpeed;
     hp;
     position = { x: undefined, y: undefined };
     attack = {
@@ -619,6 +633,7 @@ class Enemy {
         this.position.y = position.y;
         this.type = type;
         this.jump.ground = this.position.y;
+        this.rotationSpeed = 360 * cellSize.x / (Math.PI * 108);
 
         switch (this.type) {
             case "Basic":
@@ -637,24 +652,27 @@ class Enemy {
         let src;
         switch (this.type) {
             case "Basic":
-                src = "Assets/Enemies/basic_enemy.png";
+                src = "Assets/Enemies/basic.png";
                 break;
             case "Tough":
-                src = "Assets/Enemies/tough_enemy.png";
+                src = "Assets/Enemies/tough.png";
                 break;
             case "Fast":
-                src = "Assets/Enemies/basic_enemy.png";
+                src = "Assets/Enemies/fast.png";
                 break;
         }
-        return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;">`;
+        return `<img id="${this.id}" src="${src}" style="left: ${this.position.x}px; top: ${this.position.y}px;" draggable="false">`;
     }
 
     move() { //moves an enemy
         let sprite = document.getElementById(this.id);
-        this.position.x -= this.speed * cellSize.x / tps;
+        let freezing = this.freeze ? 0.5 : 1;
+
+        this.position.x -= this.speed * cellSize.x * freezing / tps;
         sprite.style.left = this.position.x.toString() + "px";
+
         if (!sprite.src.includes("tough")) {
-            let deg = Number(sprite.style.rotate.replace("deg", "")) - 212 * this.speed / tps;
+            let deg = Number(sprite.style.rotate.replace("deg", "")) - this.rotationSpeed * this.speed * freezing / tps;
             sprite.style.rotate = deg.toString() + "deg";
         } else {
             this.position.y -= this.jump.speed / tps;
@@ -665,6 +683,7 @@ class Enemy {
             }
             sprite.style.top = this.position.y.toString() + "px";
         }
+
         if (this.type == "Fast") {
             this.speed = 1.2 - (this.hp - 10) / 40;
         }
@@ -683,6 +702,13 @@ class Enemy {
         } else {
             this.attack.reload--;
         }
+    }
+
+    stateChange() {
+        let sprite = document.getElementById(this.id);
+        if(this.freeze && !sprite.src.includes("Freeze")) {
+            sprite.src = sprite.src.replace(".png", "Freeze.png");
+        } 
     }
 }
 

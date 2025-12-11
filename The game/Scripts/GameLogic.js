@@ -365,7 +365,7 @@ class LevelManager {
             let enemy = enemies[laneIndex].splice(enemyIndex, 1)[0];
 
             document.getElementById(enemy.id).remove();
-            audioManager.death.enemy.play();
+            enemy.deathSound.play();
         }
 
         let basicHp = enemy => (enemy.type == "Tough" && enemy.hp <= 50 && document.getElementById(enemy.id).src.includes("tough"));
@@ -393,7 +393,7 @@ class LevelManager {
 
             document.getElementById(tower.id).remove();
             towers[laneIndex][towerIndex] = undefined;
-            audioManager.death.tower.play();
+            tower.sounds.death.play();
         }
     }
 
@@ -478,11 +478,15 @@ class Tower {
         action: undefined,
         reload: undefined
     }
-
     lane;
     cell;
     projectileCounter = 0;
     shoot = false;
+    sounds = {
+        action: undefined,
+        hit: new Audio("Assets/Audio/tower_was_attacked.ogg"),
+        death: new Audio("Assets/Audio/tower_defeat.ogg")
+    };
 
 
     constructor(id, position, type) {
@@ -496,20 +500,28 @@ class Tower {
         switch (this.type) {
             case "Basic"://обычный
                 this.stats(6, 4, 2, 0.55);
+                this.sounds.action = new Audio("Assets/Audio/tower_attack.ogg");
                 break;
             case "Buff"://баффающий
                 this.stats(2, 10, 5, 1.2); //dont forget to change reload to 20
+                this.sounds.action = new Audio("Assets/Audio/buff_sound.ogg");
                 break;
             case "Generator": //генератор
                 this.stats(6, 2, 5, 0.6); //dont forget to change reload to 12
+                this.sounds.action = new Audio("Assets/Audio/currency_generation.ogg");
                 break;
             case "Freezing": //замедляющий
                 this.stats(6, 7, 2, 0.6);
+                this.sounds.action = new Audio("Assets/Audio/tower_attack.ogg");
                 break;
             case "Spike"://шипастый
                 this.stats(40, 5, 4, 0.75);
+                this.sounds.action = new Audio("Assets/Audio/tower_attack.ogg");
                 break;
         }
+        this.sounds.action.volume = audioManager.volume.sfx;
+        this.sounds.hit.volume = audioManager.volume.sfx;
+        this.sounds.death.volume = audioManager.volume.sfx;
     }
 
     stats(hp, cost, reload, action) {
@@ -557,7 +569,7 @@ class Tower {
                     object.currency++;
                     document.getElementById("currencyCounter").innerHTML = object.currency;
                     this.attack.reload = this.attack.speed;
-                    audioManager.towerAction.generate.play();
+                    this.sounds.action.play();
                     break;
                 case "Buff":
                     if(object.length > 0) {
@@ -565,7 +577,7 @@ class Tower {
                             object[i].curBuff = this.buff * tps;
                         }
                         this.attack.reload = this.attack.speed;
-                        audioManager.towerAction.buff.play();
+                        this.sounds.action.play();
                     }
                     break;
                 case "Spike":
@@ -573,7 +585,7 @@ class Tower {
                         for (let i = 0; i < object.length; i++)
                             object[i].hp -= 20; //20 - amount of damage
                         this.attack.reload = this.attack.speed;
-                        audioManager.towerAction.shoot.play();
+                        this.sounds.action.play();
                     }
                     break;
                 case "Freezing": //creating projectile of freezing cat
@@ -605,7 +617,7 @@ class Tower {
         let projectile = this.createProjectile(type);
         object.push(projectile);
         document.getElementById("gameScreen").innerHTML += object[object.length-1].createProjectile();
-        audioManager.towerAction.shoot.play();
+        this.sounds.action.play();
     }
 
     createProjectile(type) {
@@ -671,6 +683,7 @@ class Projectile {
     damage;
     speed;
     buffed;
+    hitSound = new Audio("Assets/Audio/enemy_was_attacked.ogg");
     constructor(id, position, type, buffed) {
         this.id = id;
         this.position.x = position.x;
@@ -678,6 +691,7 @@ class Projectile {
         this.type = type;
         this.buffed = buffed;
         this.speed = 3;
+        this.hitSound.volume = audioManager.volume.sfx;
 
         switch(this.type){
             case "BasicProjectile":
@@ -719,6 +733,7 @@ class Projectile {
         enemy.hp -= this.damage;
         if (this.type == "FreezingProjectile")
             enemy.freeze = true;
+        this.hitSound.play();
     }
 }
 
@@ -740,6 +755,7 @@ class Enemy {
         speed: tps / 2,
         reload: tps / 2
     };
+    deathSound = new Audio("Assets/Audio/enemy_defeat.ogg");
     freeze = false;
 
     constructor(id, position, type) {
@@ -749,6 +765,7 @@ class Enemy {
         this.type = type;
         this.jump.ground = this.position.y;
         this.rotationSpeed = 360 * cellSize.x / (Math.PI * 108);
+        this.deathSound.volume = audioManager.volume.sfx;
 
         switch (this.type) {
             case "Basic":
@@ -811,7 +828,7 @@ class Enemy {
 
     action(tower) { //damages tower if ready to attack
         if(this.attack.reload <= 0) {
-            audioManager.hit.tower.play();
+            tower.sounds.hit.play();
             tower.hp -= this.attack.damage;
             this.attack.reload = this.attack.speed;
         } else {
@@ -835,19 +852,6 @@ class AudioManager {
     UI = {
         click: new Audio("Assets/Audio/botton_sound.ogg"),
         towerPlace: new Audio("Assets/Audio/tower_was_placed.ogg")
-    };
-    towerAction = {
-        shoot: new Audio("Assets/Audio/tower_attack.ogg"),
-        generate: new Audio("Assets/Audio/currency_generation.ogg"),
-        buff: new Audio("Assets/Audio/buff_sound.ogg")
-    };
-    hit = {
-        enemy: new Audio("Assets/Audio/enemy_was_attacked.ogg"),
-        tower: new Audio("Assets/Audio/tower_was_attacked.ogg")
-    };
-    death = {
-        enemy: new Audio("Assets/Audio/enemy_defeat.ogg"),
-        tower: new Audio("Assets/Audio/tower_defeat.ogg")
     };
     end = {
         win: new Audio("Assets/Audio/victory.ogg"),
@@ -880,16 +884,6 @@ class AudioManager {
     setVolume() { //sets volume of all sounds
         this.UI.click.volume = this.volume.sfx;
         this.UI.towerPlace.volume = this.volume.sfx;
-
-        this.towerAction.shoot.volume = this.volume.sfx;
-        this.towerAction.generate.volume = this.volume.sfx;
-        this.towerAction.buff.volume = this.volume.sfx;
-
-        this.hit.enemy.volume = this.volume.sfx;
-        this.hit.tower.volume = this.volume.sfx;
-
-        this.death.enemy.volume = this.volume.sfx;
-        this.death.tower.volume = this.volume.sfx;
 
         this.end.win.volume = this.volume.sfx;
         this.end.lose.volume = this.volume.sfx;
